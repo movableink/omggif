@@ -513,18 +513,18 @@ function GifReader(buf) {
     }
   }
 
-  function makePalette(offset, size) {
-    if (!global_palette_offset) { return null; }
+  function makePalette(offset, size, transparent_index) {
+    if (!offset) { return null; }
 
     let colors = [];
 
-    for(let i = 0; i < global_palette_size; i++) {
+    for(let i = 0; i < size; i++) {
       if (i === transparent_index) {
         colors.push({ r: 0, g: 0, b: 0, a: 0 });
       } else {
-        const r = buf[global_palette_offset + i * 3];
-        const g = buf[global_palette_offset + i * 3 + 1];
-        const b = buf[global_palette_offset + i * 3 + 2];
+        const r = buf[offset + i * 3];
+        const g = buf[offset + i * 3 + 1];
+        const b = buf[offset + i * 3 + 2];
         const a = 255;
         colors.push({ r, g, b, a });
       }
@@ -534,12 +534,14 @@ function GifReader(buf) {
   };
 
   this.globalPalette = function() {
-    return makePalette(global_palette_offset, global_palette_size);
+    return makePalette(global_palette_offset, global_palette_size, -1);
   };
 
   this.framePalette = function(frame_num) {
     const frame = this.frameInfo(frame_num);
-    return makePalette(frame.palette_offset, frame.palette_size);
+    return makePalette(frame.palette_offset,
+                       frame.palette_size,
+                       frame.transparent_index);
   };
 
   this.numFrames = function() {
@@ -554,7 +556,7 @@ function GifReader(buf) {
     if (frame_num < 0 || frame_num >= frames.length)
       throw new Error("Frame index out of range.");
     return frames[frame_num];
-  }
+  };
 
   this.decodeAndBlitFrameBGRA = function(frame_num, pixels) {
     var frame = this.frameInfo(frame_num);
