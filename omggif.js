@@ -379,15 +379,15 @@ function GifReader(buf) {
   var global_palette_flag = pf0 >> 7;
   var num_global_colors_pow2 = pf0 & 0x7;
   var num_global_colors = 1 << (num_global_colors_pow2 + 1);
-  var background = buf[p++];
+  this.background_index = buf[p++];
   buf[p++];  // Pixel aspect ratio (unused?).
 
   var global_palette_offset = null;
   var global_palette_size   = null;
 
   if (global_palette_flag) {
-    global_palette_offset = p;
-    global_palette_size = num_global_colors;
+    this.global_palette_offset = global_palette_offset = p;
+    this.global_palette_size = global_palette_size = num_global_colors;
     p += num_global_colors * 3;  // Seek past palette.
   }
 
@@ -512,6 +512,35 @@ function GifReader(buf) {
         break;
     }
   }
+
+  function makePalette(offset, size) {
+    if (!global_palette_offset) { return null; }
+
+    let colors = [];
+
+    for(let i = 0; i < global_palette_size; i++) {
+      if (i === transparent_index) {
+        colors.push({ r: 0, g: 0, b: 0, a: 0 });
+      } else {
+        const r = buf[global_palette_offset + i * 3];
+        const g = buf[global_palette_offset + i * 3 + 1];
+        const b = buf[global_palette_offset + i * 3 + 2];
+        const a = 255;
+        colors.push({ r, g, b, a });
+      }
+    }
+
+    return colors;
+  };
+
+  this.globalPalette = function() {
+    return makePalette(global_palette_offset, global_palette_size);
+  };
+
+  this.framePalette = function(frame_num) {
+    const frame = this.frameInfo(frame_num);
+    return makePalette(frame.palette_offset, frame.palette_size);
+  };
 
   this.numFrames = function() {
     return frames.length;
